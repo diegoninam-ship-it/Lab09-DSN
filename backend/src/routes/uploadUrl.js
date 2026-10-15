@@ -13,12 +13,14 @@ router.post("/", validarSolicitudSubida, async (req, res) => {
     const { filename, contentType } = req.archivoSaneado;
     const key = `originales/${Date.now()}-${nanoid(12)}-${filename}`;
 
+    // El cifrado SSE-KMS lo garantiza la configuracion de cifrado por
+    // defecto del bucket (Etapa 2, Parte C), no esta URL: ServerSideEncryption
+    // y SSEKMSKeyId no son signableHeaders por defecto en el presigner y no
+    // tendrian efecto en la firma (D11).
     const command = new PutObjectCommand({
       Bucket: config.s3Bucket,
       Key: key,
       ContentType: contentType,
-      ServerSideEncryption: "aws:kms",
-      SSEKMSKeyId: config.s3KmsKeyAlias,
     });
 
     const uploadUrl = await getSignedUrl(s3Client, command, {

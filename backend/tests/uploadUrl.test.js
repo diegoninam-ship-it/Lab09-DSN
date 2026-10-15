@@ -31,8 +31,6 @@ describe("POST /api/upload-url", () => {
     const comando = getSignedUrl.mock.calls[0][1];
     expect(comando.input.Bucket).toBe("test-bucket");
     expect(comando.input.ContentType).toBe("image/jpeg");
-    expect(comando.input.ServerSideEncryption).toBe("aws:kms");
-    expect(comando.input.SSEKMSKeyId).toBe("alias/test-key");
 
     const opciones = getSignedUrl.mock.calls[0][2];
     expect(opciones.expiresIn).toBe(300);

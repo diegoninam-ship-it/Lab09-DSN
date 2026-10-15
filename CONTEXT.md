@@ -44,8 +44,8 @@
 
 - Etapa 2 (AWS) completa y verificada por el usuario (bucket, IAM, KMS y CRR existentes y funcionando).
 - Etapa 3, **fase F1 cerrada**: estructura del repo, `package.json` de backend y frontend, `.env.example`, `.gitignore` y `config.js` con validación de arranque.
-- Etapa 3, **fase F2 cerrada**: `s3Client.js`, `POST /api/upload-url` (validación, saneo de `filename`, SSE-KMS, presigned URL), 11 pruebas en verde (Vitest + Supertest + mock de `aws-sdk-client-mock` y de `s3-request-presigner`, sin tocar AWS real).
-- Etapa 3, **fase F3 cerrada**: `GET /api/images`, `DELETE /api/images/:key(*)`, `GET /api/health`, `helmet()` global, `cors` restringido a `CORS_ORIGIN` y rate limiting (20 req/min/IP) en `/api/upload-url`. 18 pruebas en verde. Pendiente F4.
+- Etapa 3, **fase F2 cerrada** (corregida el 2026-10-14, ver D11): `s3Client.js`, `POST /api/upload-url` (validación, saneo de `filename`, presigned URL), 18 pruebas en verde. El `PutObjectCommand` de la URL firmada ya no incluye `ServerSideEncryption`/`SSEKMSKeyId` — no son `signableHeaders` por defecto en `s3-request-presigner`, así que no afectaban la firma; el cifrado SSE-KMS lo garantiza el cifrado por defecto del bucket.
+- Etapa 3, **fase F3 cerrada**: `GET /api/images`, `DELETE /api/images/:key(*)`, `GET /api/health`, `helmet()` global, `cors` restringido a `CORS_ORIGIN` y rate limiting (20 req/min/IP) en `/api/upload-url`. 18 pruebas en verde.
 
 ---
 
@@ -90,7 +90,7 @@ Base: `http://localhost:3000`. Todas las respuestas en JSON. El frontend corre e
 - `sizeBytes` ≤ 5 MB (`5 * 1024 * 1024` bytes).
 - `filename` saneado: solo `[a-zA-Z0-9._-]`, el resto se reemplaza por `_`.
 - La `key` final: `originales/<timestamp>-<6 bytes hex aleatorios>-<nombre saneado>` — nunca usar el nombre del usuario tal cual, para evitar colisiones y *path traversal* (`../`).
-- `PutObjectCommand` para la URL de subida incluye `ServerSideEncryption: "aws:kms"` y `SSEKMSKeyId` (el alias de la CMK), consistente con el cifrado por defecto del bucket (sección 10.3).
+- `PutObjectCommand` para la URL de subida **no** incluye `ServerSideEncryption` ni `SSEKMSKeyId`: verificado contra el código fuente y el README de `@aws-sdk/s3-request-presigner`, estos campos no forman parte de los `signableHeaders` por defecto del presigner, así que no tendrían ningún efecto sobre la firma de una URL presignada (quedarían ahí como adorno, sugiriendo una garantía que no existe). El cifrado SSE-KMS del objeto subido lo garantiza exclusivamente el **cifrado por defecto del bucket** (sección 10.4, verificado manualmente en la Etapa 2) — ver decisión D11.
 
 ### Expiración de las presigned URLs
 
@@ -355,6 +355,7 @@ Evidencia: capturas de cada una + el informe PDF con las respuestas a las pregun
 | D8 | Etapa 2 (AWS) antes que la Etapa 3 (desarrollo) | La app depende de un bucket y credenciales reales desde el primer endpoint |
 | D9 | Sin Docker | Ni el enunciado lo pide ni hay una base de datos local que aislar; la app habla directo con S3 real |
 | D10 | Pruebas E2E con un S3 simulado en memoria (`S3_MOCK=1`), independientes del bucket real | El agente nunca debe depender de credenciales reales para que sus pruebas pasen |
+| D11 | El cifrado SSE-KMS se garantiza por la configuración de cifrado por defecto del bucket, no por headers en la URL firmada | `ServerSideEncryption`/`SSEKMSKeyId` en el `PutObjectCommand` no son `signableHeaders` por defecto en `@aws-sdk/s3-request-presigner`, por lo que no quedan incluidos en la firma; forzarlos (vía `hoistableHeaders`) obligaría al frontend a enviar headers exactos, acoplándolo al alias de KMS — evita depender de que cada cliente lo declare correctamente |
 
 ---
 
@@ -377,3 +378,4 @@ Evidencia: capturas de cada una + el informe PDF con las respuestas a las pregun
 | 2026-10-14 | Fase F1 cerrada: estructura de carpetas `backend/` y `frontend/`, `package.json` de ambos con las versiones de la sección 7, `.env.example`, `.gitignore` raíz y `backend/src/config.js` (valida al arrancar que existan `AWS_REGION`, `S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_KMS_KEY_ALIAS`). |
 | 2026-10-14 | Fase F2 cerrada: `s3Client.js`, `app.js`/`server.js` mínimos, middleware `validarArchivo.js` (tipo, tamaño, saneo de `filename` contra path traversal) y `POST /api/upload-url` (key `originales/<timestamp>-<nanoid>-<nombre saneado>`, `ServerSideEncryption: aws:kms`, `SSEKMSKeyId`, TTL 300 s). 11 pruebas (Vitest + Supertest): `aws-sdk-client-mock` sobre el `S3Client` y `vi.mock` sobre `s3-request-presigner`; ninguna prueba llama a AWS real ni usa credenciales reales (`vitest.config.js` inyecta valores ficticios vía `test.env`). |
 | 2026-10-14 | Fase F3 cerrada: `GET /api/images` (lista con `ListObjectsV2Command`, URL de lectura firmada por 900 s), `DELETE /api/images/*key` (reconstruye la key desde el wildcard de Express 5, exige prefijo `originales/`, `HeadObjectCommand` previo para devolver 404 si no existe), `GET /api/health` (no contacta a S3), `helmet()` global, `cors` restringido a `CORS_ORIGIN` y `express-rate-limit` (20 req/min/IP) en `/api/upload-url`. 18 pruebas en verde en total. |
+| 2026-10-14 | Corrección sobre F2 (sección 6, decisión D11): se retiran `ServerSideEncryption`/`SSEKMSKeyId` del `PutObjectCommand` de `POST /api/upload-url` — no son `signableHeaders` por defecto en `@aws-sdk/s3-request-presigner` y no afectaban la firma de la URL (verificado contra el README/código fuente del paquete). El cifrado SSE-KMS del objeto subido queda garantizado únicamente por el cifrado por defecto del bucket (sección 10.4). Tests de `uploadUrl.test.js` actualizados; 18 pruebas siguen en verde. |
