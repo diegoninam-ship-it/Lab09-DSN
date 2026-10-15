@@ -44,7 +44,8 @@
 
 - Etapa 2 (AWS) completa y verificada por el usuario (bucket, IAM, KMS y CRR existentes y funcionando).
 - Etapa 3, **fase F1 cerrada**: estructura del repo, `package.json` de backend y frontend, `.env.example`, `.gitignore` y `config.js` con validación de arranque.
-- Etapa 3, **fase F2 cerrada**: `s3Client.js`, `POST /api/upload-url` (validación, saneo de `filename`, SSE-KMS, presigned URL), 11 pruebas en verde (Vitest + Supertest + mock de `aws-sdk-client-mock` y de `s3-request-presigner`, sin tocar AWS real). Pendiente F3.
+- Etapa 3, **fase F2 cerrada**: `s3Client.js`, `POST /api/upload-url` (validación, saneo de `filename`, SSE-KMS, presigned URL), 11 pruebas en verde (Vitest + Supertest + mock de `aws-sdk-client-mock` y de `s3-request-presigner`, sin tocar AWS real).
+- Etapa 3, **fase F3 cerrada**: `GET /api/images`, `DELETE /api/images/:key(*)`, `GET /api/health`, `helmet()` global, `cors` restringido a `CORS_ORIGIN` y rate limiting (20 req/min/IP) en `/api/upload-url`. 18 pruebas en verde. Pendiente F4.
 
 ---
 
@@ -375,3 +376,4 @@ Evidencia: capturas de cada una + el informe PDF con las respuestas a las pregun
 | 2026-10-14 | Planificación cerrada: alcance (obligatorio + SSE-KMS + CRR), stack (Node/Express backend, React/Vite/TS frontend), testing (Vitest/Supertest + Playwright + 6 pruebas manuales). Decisiones D1–D10. |
 | 2026-10-14 | Fase F1 cerrada: estructura de carpetas `backend/` y `frontend/`, `package.json` de ambos con las versiones de la sección 7, `.env.example`, `.gitignore` raíz y `backend/src/config.js` (valida al arrancar que existan `AWS_REGION`, `S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_KMS_KEY_ALIAS`). |
 | 2026-10-14 | Fase F2 cerrada: `s3Client.js`, `app.js`/`server.js` mínimos, middleware `validarArchivo.js` (tipo, tamaño, saneo de `filename` contra path traversal) y `POST /api/upload-url` (key `originales/<timestamp>-<nanoid>-<nombre saneado>`, `ServerSideEncryption: aws:kms`, `SSEKMSKeyId`, TTL 300 s). 11 pruebas (Vitest + Supertest): `aws-sdk-client-mock` sobre el `S3Client` y `vi.mock` sobre `s3-request-presigner`; ninguna prueba llama a AWS real ni usa credenciales reales (`vitest.config.js` inyecta valores ficticios vía `test.env`). |
+| 2026-10-14 | Fase F3 cerrada: `GET /api/images` (lista con `ListObjectsV2Command`, URL de lectura firmada por 900 s), `DELETE /api/images/*key` (reconstruye la key desde el wildcard de Express 5, exige prefijo `originales/`, `HeadObjectCommand` previo para devolver 404 si no existe), `GET /api/health` (no contacta a S3), `helmet()` global, `cors` restringido a `CORS_ORIGIN` y `express-rate-limit` (20 req/min/IP) en `/api/upload-url`. 18 pruebas en verde en total. |

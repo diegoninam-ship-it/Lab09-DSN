@@ -69,3 +69,18 @@ describe("POST /api/upload-url", () => {
     expect(getSignedUrl).not.toHaveBeenCalled();
   });
 });
+
+describe("Rate limiting en /api/upload-url", () => {
+  it("responde 429 al superar 20 solicitudes por minuto desde la misma IP", async () => {
+    const appAislada = crearApp();
+    const cuerpo = { filename: "foto.jpg", contentType: "image/jpeg", sizeBytes: 100 };
+
+    for (let i = 0; i < 20; i += 1) {
+      const respuesta = await request(appAislada).post("/api/upload-url").send(cuerpo);
+      expect(respuesta.status).toBe(200);
+    }
+
+    const respuestaExtra = await request(appAislada).post("/api/upload-url").send(cuerpo);
+    expect(respuestaExtra.status).toBe(429);
+  });
+});
