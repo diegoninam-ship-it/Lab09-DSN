@@ -42,8 +42,8 @@
 
 **Última actualización:** 2026-10-14
 
-- Planificación cerrada. **Sigue la Etapa 2 (AWS)**, manual, guiada por chat — ver sección 10.
-- El agente **no debe iniciar la fase F1** hasta que la sección 10 esté marcada como completa y el usuario confirme que el `.env` con las credenciales reales está listo (sección 11.4).
+- Etapa 2 (AWS) completa y verificada por el usuario (bucket, IAM, KMS y CRR existentes y funcionando).
+- Etapa 3, **fase F1 cerrada**: estructura del repo, `package.json` de backend y frontend, `.env.example`, `.gitignore` y `config.js` con validación de arranque. Pendiente F2.
 
 ---
 
@@ -372,3 +372,4 @@ Evidencia: capturas de cada una + el informe PDF con las respuestas a las pregun
 | Fecha | Cambio |
 |---|---|
 | 2026-10-14 | Planificación cerrada: alcance (obligatorio + SSE-KMS + CRR), stack (Node/Express backend, React/Vite/TS frontend), testing (Vitest/Supertest + Playwright + 6 pruebas manuales). Decisiones D1–D10. |
+| 2026-10-14 | Fase F1 cerrada: estructura de carpetas `backend/` y `frontend/`, `package.json` de ambos con las versiones de la sección 7, `.env.example`, `.gitignore` raíz y `backend/src/config.js` (valida al arrancar que existan `AWS_REGION`, `S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_KMS_KEY_ALIAS`). |
