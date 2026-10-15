@@ -20,9 +20,18 @@ export async function solicitarUploadUrl(datos: {
 
 // PUT directo a S3 con la URL firmada: nunca pasa por el backend ni por
 // credenciales de AWS (el navegador solo conoce la URL temporal).
-export async function subirArchivoAS3(uploadUrl: string, archivo: File): Promise<void> {
+export async function subirArchivoAS3(
+  uploadUrl: string,
+  archivo: File,
+  onProgreso?: (porcentaje: number) => void
+): Promise<void> {
   await axios.put(uploadUrl, archivo, {
     headers: { "Content-Type": archivo.type },
+    onUploadProgress: (evento) => {
+      if (onProgreso && evento.total) {
+        onProgreso(Math.round((evento.loaded / evento.total) * 100));
+      }
+    },
   });
 }
 

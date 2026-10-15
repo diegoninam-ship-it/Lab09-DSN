@@ -41,23 +41,50 @@ export function Galeria({ actualizarEn }: Props) {
   }
 
   if (cargando) {
-    return <p>Cargando galeria...</p>;
+    return (
+      <div className="galeria-estado" data-testid="galeria">
+        <span className="spinner" aria-hidden="true" />
+        <p>Cargando galeria...</p>
+      </div>
+    );
   }
 
   return (
     <div data-testid="galeria">
-      {error && <p role="alert">{error}</p>}
-      {imagenes.length === 0 && <p>No hay imagenes todavia.</p>}
-      <ul>
-        {imagenes.map((imagen) => (
-          <li key={imagen.key}>
-            <img src={imagen.url} alt={imagen.key} width={160} />
-            <button onClick={() => manejarEliminar(imagen.key)} data-testid="boton-eliminar">
-              Eliminar
-            </button>
-          </li>
-        ))}
-      </ul>
+      {error && (
+        <div className="toast toast--error">
+          <span className="toast__icono" aria-hidden="true">
+            ⚠
+          </span>
+          <p role="alert" className="toast__mensaje">
+            {error}
+          </p>
+        </div>
+      )}
+
+      {imagenes.length === 0 ? (
+        <div className="galeria-estado">
+          <span className="galeria-estado__icono" aria-hidden="true">
+            🖼
+          </span>
+          <p>No hay imagenes todavia.</p>
+        </div>
+      ) : (
+        <ul className="galeria-grid">
+          {imagenes.map((imagen) => (
+            <li key={imagen.key} className="galeria-item">
+              <img src={imagen.url} alt={imagen.key} className="galeria-item__imagen" />
+              <button
+                onClick={() => manejarEliminar(imagen.key)}
+                data-testid="boton-eliminar"
+                className="galeria-item__eliminar"
+              >
+                Eliminar
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
