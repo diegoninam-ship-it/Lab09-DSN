@@ -24,7 +24,11 @@ export default defineConfig({
       command: "node src/server.js",
       cwd: backendDir,
       url: `${BACKEND_URL}/api/health`,
-      reuseExistingServer: !process.env.CI,
+      // Nunca reutilizar un servidor ya existente en este puerto: si fuera
+      // un backend real (credenciales reales), las pruebas tocarian AWS de
+      // verdad en silencio. Siempre se levanta un proceso aislado y propio
+      // con las credenciales ficticias de abajo.
+      reuseExistingServer: false,
       env: {
         // Credenciales e identificadores ficticios: el backend nunca llama
         // a AWS de verdad en modo E2E (S3_MOCK=1 intercepta el S3Client).
@@ -46,7 +50,10 @@ export default defineConfig({
       command: "npm run dev",
       cwd: __dirname,
       url: "http://localhost:5173",
-      reuseExistingServer: !process.env.CI,
+      // Idem: nunca reutilizar un dev server ya corriendo, para no heredar
+      // un VITE_API_URL equivocado (ver el incidente documentado en la
+      // seccion 3 de CONTEXT.md, fase F7).
+      reuseExistingServer: false,
       env: {
         VITE_API_URL: BACKEND_URL,
       },

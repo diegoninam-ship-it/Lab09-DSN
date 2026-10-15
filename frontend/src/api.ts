@@ -1,7 +1,11 @@
 import axios from "axios";
 import type { ImagenS3, RespuestaUploadUrl } from "./types";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+// Sin VITE_API_URL, usa rutas relativas ("/api/...") resueltas contra el
+// origen actual de la pagina. Funciona tanto detras del proxy de nginx en
+// Docker (mismo origen) como en desarrollo nativo, donde VITE_API_URL puede
+// seguir apuntando directo al backend en el puerto que uses.
+const API_URL = import.meta.env.VITE_API_URL ?? "";
 
 const cliente = axios.create({ baseURL: API_URL });
 

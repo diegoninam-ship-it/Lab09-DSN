@@ -1,0 +1,17 @@
+services:
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    environment:
+      # Fijo dentro del contenedor, sin importar el PORT que tenga el .env
+      # local (ese PORT=3001 es solo para evitar un choque en la maquina del
+      # usuario fuera de Docker; aqui la red de Docker esta aislada).
+      PORT: "3000"
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy

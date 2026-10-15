@@ -99,7 +99,12 @@ npm run e2e
 `S3_MOCK=1` y credenciales ficticias) y el frontend (`VITE_API_URL`
 apuntando a ese backend) como `webServer`, corre las pruebas y los apaga al
 terminar. **No requiere que la Etapa 2 (AWS) esté completa** ni usa
-credenciales reales en ningún momento.
+credenciales reales en ningún momento. `reuseExistingServer` está
+deshabilitado a propósito: si el puerto 3010 ya está ocupado por otra cosa
+(por ejemplo, un backend real tuyo corriendo ahí por cualquier motivo), la
+corrida falla con `EADDRINUSE` en vez de reutilizar en silencio lo que haya
+— nunca se arriesga a ejecutar las pruebas contra AWS real sin que te des
+cuenta.
 
 `frontend/e2e/01-flujo-completo.spec.ts` automatiza las 6 pruebas
 obligatorias de la sección 12 de CONTEXT.md: subida de una imagen válida,
@@ -108,6 +113,44 @@ archivo de 10 MB, expiración de la URL de lectura (con un TTL acortado solo
 para esta prueba), ausencia de credenciales AWS en el código servido al
 navegador, y verificación de que la subida va directa al endpoint de
 almacenamiento y no al backend.
+
+## Docker (modo adicional, contra el bucket real)
+
+`docker compose up -d --build` levanta la app completa en contenedores:
+backend (Express) + frontend servido por nginx, que hace de proxy hacia el
+backend en `/api/`. Es un modo **adicional** para demostrar la app
+dockerizada — el flujo de desarrollo nativo (`npm run dev`, Vitest,
+Playwright con `S3_MOCK=1`) sigue funcionando exactamente igual y no
+depende de Docker para nada.
+
+```bash
+docker compose up -d --build
+# http://localhost:8080
+```
+
+- El backend usa tu `backend/.env` real (`env_file`) — nunca se commitea,
+  igual que en desarrollo nativo — pero **dentro** del contenedor `PORT`
+  siempre es `3000` sin importar lo que tenga tu `.env` local (el
+  `docker-compose.yml` lo fija explícitamente), así que un `PORT` distinto
+  que uses en tu máquina para evitar conflictos locales no afecta a Docker.
+- El backend no publica su puerto al host: solo es alcanzable desde el
+  contenedor `frontend` a través de la red interna de Docker
+  (`http://backend:3000`), vía el proxy de nginx en `/api/`.
+- El frontend, al no tener `VITE_API_URL` definida en el build de Docker,
+  usa rutas relativas (`/api/...`) que nginx reenvía al backend — mismo
+  origen para el navegador, sin problemas de CORS entre frontend y backend.
+
+> **⚠️ Prerrequisito manual en AWS (no lo ejecuta el agente):** para que las
+> subidas funcionen desde `http://localhost:8080`, el bucket
+> `lab-09-nina-20261014` necesita `http://localhost:8080` agregado a
+> `AllowedOrigins` en su configuración de CORS (sección 10.7 de
+> CONTEXT.md). Sin este paso, el navegador bloqueará el `PUT` directo a S3
+> por CORS aunque el resto de la app funcione. Es un cambio en la consola
+> de AWS, a cargo del usuario.
+
+```bash
+docker compose down   # apagar y liberar los contenedores
+```
 
 ## Las 6 pruebas manuales contra AWS real
 
