@@ -13,6 +13,13 @@ router.post("/", validarSolicitudSubida, async (req, res) => {
     const { filename, contentType } = req.archivoSaneado;
     const key = `originales/${Date.now()}-${nanoid(12)}-${filename}`;
 
+    // Modo E2E (S3_MOCK=1): la URL de subida apunta al PUT simulado de este
+    // mismo proceso en vez de a un presigned real, para no tocar AWS.
+    if (config.s3Mock) {
+      const uploadUrl = `${req.protocol}://${req.get("host")}/mock-s3/${key}`;
+      return res.status(200).json({ uploadUrl, key });
+    }
+
     // El cifrado SSE-KMS lo garantiza la configuracion de cifrado por
     // defecto del bucket (Etapa 2, Parte C), no esta URL: ServerSideEncryption
     // y SSEKMSKeyId no son signableHeaders por defecto en el presigner y no

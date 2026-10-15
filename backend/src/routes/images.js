@@ -22,11 +22,18 @@ router.get("/", async (req, res) => {
 
     const imagenes = await Promise.all(
       objetos.map(async (obj) => {
-        const url = await getSignedUrl(
-          s3Client,
-          new GetObjectCommand({ Bucket: config.s3Bucket, Key: obj.Key }),
-          { expiresIn: config.readUrlTtlSegundos }
-        );
+        // Modo E2E (S3_MOCK=1): URL de lectura simulada por este mismo
+        // proceso, con el mismo TTL codificado en la query (?exp=), en vez
+        // de un presigned GET real.
+        const url = config.s3Mock
+          ? `${req.protocol}://${req.get("host")}/mock-s3/${obj.Key}?exp=${
+              Date.now() + config.readUrlTtlSegundos * 1000
+            }`
+          : await getSignedUrl(
+              s3Client,
+              new GetObjectCommand({ Bucket: config.s3Bucket, Key: obj.Key }),
+              { expiresIn: config.readUrlTtlSegundos }
+            );
         return {
           key: obj.Key,
           size: obj.Size,
